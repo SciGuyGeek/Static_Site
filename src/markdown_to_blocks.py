@@ -36,25 +36,31 @@ def markdown_to_html_node(markdown):
     html_nodes = []
     for block in blocks:
         block_type = block_to_block_type(block)
-        # For simplicity, treat all blocks as paragraphs in this example
         if block_type == BlockType.PARAGRAPH:
-            text_node = TextNode(block, TextType.TEXT)
-            html_node = text_node_to_html_node(text_node)
+            strip_block = block.replace("\n", " ").strip()
+            if strip_block == "":
+                continue
+            text_node = text_to_textnodes(strip_block)
+            children = []
+            for tn in text_node:
+                children.append(text_node_to_html_node(tn))
+            html_node = ParentNode("p", children)
             html_nodes.append(html_node)
         elif block_type == BlockType.HEADING:
             count_pound = block.count("#")
-            text_node = TextNode(block.lstrip("# ").strip(), TextType.TEXT)
-            html_node = text_node_to_html_node(text_node)
-            html_node.tag = f"h{count_pound}"
+            item_text = block.lstrip("# ").strip()
+            text_node = text_to_textnodes(item_text)
+            children = [text_node_to_html_node(tn) for tn in text_node]
+            html_node = ParentNode(f"h{count_pound}", children)
             html_nodes.append(html_node)
         elif block_type == BlockType.UNORDERED_LIST:
             items = block.split("\n")
             li_nodes = []
             for item in items:
                 item_text = item.lstrip("- ").strip()
-                text_node = TextNode(item_text, TextType.TEXT)
-                li_node = text_node_to_html_node(text_node)
-                li_node.tag = "li"
+                text_node = text_to_textnodes(item_text)
+                children = [text_node_to_html_node(tn) for tn in text_node]
+                li_node = ParentNode("li", children)
                 li_nodes.append(li_node)
             ul_node = ParentNode("ul", li_nodes)
             html_nodes.append(ul_node)
@@ -63,22 +69,32 @@ def markdown_to_html_node(markdown):
             li_nodes = []
             for item in items:
                 item_text = re.sub(r'^\d+\.\s', '', item).strip()
-                text_node = TextNode(item_text, TextType.TEXT)
-                li_node = text_node_to_html_node(text_node)
-                li_node.tag = "li"
+                text_node = text_to_textnodes(item_text)
+                children = [text_node_to_html_node(tn) for tn in text_node]
+                li_node = ParentNode("li", children)
                 li_nodes.append(li_node)
             ol_node = ParentNode("ol", li_nodes)
             html_nodes.append(ol_node)
         elif block_type == BlockType.QUOTE:
-            quote_text = block.lstrip("> ").strip()
-            text_node = TextNode(quote_text, TextType.TEXT)
-            html_node = text_node_to_html_node(text_node)
-            blockquote_node = ParentNode("blockquote", [html_node])
+            items = block.split("\n")
+            cleaned_lines = []
+            for item in items:
+                cleaned_line = item.lstrip("> ").strip()
+                cleaned_lines.append(cleaned_line)
+            joined_text = "\n".join(cleaned_lines)
+            text_node = text_to_textnodes(joined_text)
+            children = [text_node_to_html_node(tn) for tn in text_node]
+            blockquote_node = ParentNode("blockquote", children)
             html_nodes.append(blockquote_node)
         elif block_type == BlockType.CODE:
-            code_content = block.strip("```").strip()
+            lines = block.split("\n")
+            inner_lines = lines[1:-1]
+            code_content = "\n".join(inner_lines)
+            if block.endswith("\n```"):
+                code_content += "\n"
             code_node = LeafNode("code", code_content)
             pre_node = ParentNode("pre", [code_node])
             html_nodes.append(pre_node)
-            
-    return html_nodes
+
+    node = ParentNode("div", html_nodes)
+    return node

@@ -1,5 +1,6 @@
 import unittest
 from markdown_to_blocks import *
+from extract_title import extract_title
 
 class TestMarkdownToBlocks(unittest.TestCase):
     
@@ -63,12 +64,12 @@ This is another paragraph with _italic_ text and `code` here
 
 """
 
-        html = markdown_to_html_node(md)
+        html = markdown_to_html_node(md).to_html()
         self.assertEqual(
             html,
             "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p><p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>",
         )
-
+        
     def test_codeblock(self):
         md = """
 ```
@@ -77,8 +78,20 @@ the **same** even with inline stuff
 ```
 """
 
-        html = markdown_to_html_node(md)
+        html = markdown_to_html_node(md).to_html()
         self.assertEqual(
             html,
             "<div><pre><code>This is text that _should_ remain\nthe **same** even with inline stuff\n</code></pre></div>",
         )
+
+    def test_extract_title(self):
+        md = """# This is the title
+## This is a subtitle
+###### This is some paragraph text.
+"""
+        title = extract_title(md)
+        self.assertEqual(title, "This is the title")
+    
+    def test_extract_title_no_title(self):
+        md = """## This is a subtitle"""
+        self.assertRaises(Exception, extract_title, md)
